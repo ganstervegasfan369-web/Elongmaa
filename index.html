@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Elongma Runner Game</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html,body{height:100%;margin:0;background:#0d1117;color:#fff;font-family:Arial,Helvetica,sans-serif}
+    .wrap{max-width:900px;margin:18px auto;text-align:center;padding:10px}
+    canvas{display:block;margin:10px auto;border-radius:8px;background:#111; width:100%; max-width:900px; height:260px}
+    h1{margin:0 0 8px;font-size:24px}
+    p.small{margin:6px 0;color:#ccc}
+    .footer{font-size:12px;color:#aaa;margin-top:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🚀 Elongma Runner — Tap / Space to Jump</h1>
+    <canvas id="game" width="900" height="260"></canvas>
+    <p class="small">Play as Elongma! Dodge the rockets and score high 🎮</p>
+    <div class="footer">Made for the Elongma (ELONGMA) Meme Coin Community</div>
+  </div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  let speed = 6, gravity = 0.6, score = 0;
+  let highscore = parseInt(localStorage.getItem('elongma_high')||'0',10);
+  let gameOver = false;
+
+  // Use your Elongma logo as the player
+  const playerImg = new Image();
+  playerImg.src = "https://black-labour-buzzard-448.mypinata.cloud/ipfs/bafybeiddmwvy45g4zsxgngsiihxq7tztvjenjkt5utrdgwla5vhxnihmp4";
+
+  const elongma = {
+    x: 60, y: H - 20 - 60, w: 60, h: 60,
+    vy: 0, jumpPower: 12, grounded: true,
+    draw(){ ctx.drawImage(playerImg, this.x, this.y, this.w, this.h); },
+    update(){
+      this.vy += gravity;
+      this.y += this.vy;
+      if(this.y + this.h >= H - 20){
+        this.y = H - 20 - this.h;
+        this.vy = 0; this.grounded = true;
+      } else this.grounded = false;
+    },
+    jump(){ if(this.grounded){ this.vy = -this.jumpPower; this.grounded = false; } }
+  };
+
+  class Obstacle {
+    constructor(){
+      this.w = 40; this.h = 40;
+      this.x = W + Math.random()*200;
+      this.y = H - 20 - this.h;
+    }
+    update(){ this.x -= speed; }
+    draw(){
+      ctx.fillStyle = "#ff4500";
+      ctx.fillRect(this.x, this.y, this.w, this.h);
+      ctx.fillStyle = "#fff";
+      ctx.fillText("🚀", this.x+8, this.y+28);
+    }
+  }
+
+  let obstacles = [], spawnTimer = 0;
+
+  function reset(){
+    obstacles = []; spawnTimer = 0; score = 0; speed = 6; gameOver = false;
+    elongma.y = H - 20 - elongma.h; elongma.vy = 0;
+    loop();
+  }
+
+  function drawGround(){ ctx.fillStyle = "#22c55e"; ctx.fillRect(0,H-20,W,20); }
+
+  function loop(){
+    ctx.fillStyle = "#1e293b"; ctx.fillRect(0,0,W,H);
+    drawGround();
+
+    spawnTimer++;
+    if(spawnTimer > 100 - Math.min(80, Math.floor(score/200))){
+      obstacles.push(new Obstacle()); spawnTimer = 0;
+    }
+
+    elongma.update(); elongma.draw();
+
+    for(let i=obstacles.length-1;i>=0;i--){
+      const ob = obstacles[i]; ob.update(); ob.draw();
+      if(ob.x + ob.w < -50) obstacles.splice(i,1);
+      if(elongma.x < ob.x + ob.w && elongma.x + elongma.w > ob.x && elongma.y < ob.y + ob.h && elongma.y + elongma.h > ob.y){ gameOver = true; }
+    }
+
+    if(!gameOver){ score++; if(score % 600 === 0) speed += 0.6; }
+
+    ctx.fillStyle = "#fff"; ctx.font = "18px Arial";
+    ctx.fillText("Score: " + score, W-140, 28);
+    ctx.fillText("High: " + highscore, W-260, 28);
+
+    if(gameOver){
+      if(score > highscore){ highscore = score; localStorage.setItem('elongma_high', highscore); }
+      ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(0,0,W,H);
+      ctx.fillStyle = "#fff"; ctx.font = "22px Arial";
+      ctx.fillText("Game Over — Tap / Space to Restart", 150, H/2);
+      return;
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  document.addEventListener("keydown", e => { if(e.code==="Space"){ e.preventDefault(); if(gameOver) reset(); else elongma.jump(); }});
+  canvas.addEventListener("click", () => { if(gameOver) reset(); else elongma.jump(); });
+
+  loop();
+})();
+</script>
+</body>
+</html>
